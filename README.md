@@ -132,6 +132,4 @@ archsafe config clear --yes                 # skip confirmation prompt
   community trust. No safety concerns detected.
 ```
 
-## License
 
-MIT
