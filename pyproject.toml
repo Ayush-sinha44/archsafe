@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68.0", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "archsafe"
+version = "1.0.0"
+description = "A safety analysis tool for Arch Linux updates and AUR packages"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    {name = "Ayush"}
+]
+readme = "README.md"
+dependencies = [
+    "typer[all]>=0.9.0",
+    "rich>=13.0.0",
+    "requests>=2.31.0",
+    "feedparser>=6.0.0",
+    "groq>=0.4.0",
+    "openai>=1.0.0",
+]
+
+[project.scripts]
+archsafe = "archsafe.main:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
