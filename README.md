@@ -11,7 +11,7 @@ A safety analysis tool for Arch Linux updates and AUR packages. ArchSafe checks 
 ## Installation
 
 ```bash
-git clone https://github.com/ayush/archsafe.git
+git clone https://github.com/Ayush-sinha44/archsafe.git
 cd archsafe
 pip install -e .
 ```
