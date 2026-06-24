@@ -8,15 +8,57 @@ A safety analysis tool for Arch Linux updates and AUR packages. ArchSafe checks 
 - **AUR Package Analyzer** — Evaluates AUR packages by inspecting maintainer activity, vote count, popularity, out-of-date status, and upstream health. Produces a risk score so you can make informed decisions before installing.
 - **AI-Powered Analysis** (optional) — Uses Groq or OpenAI to provide detailed, human-readable safety summaries and recommendations. No API key is needed for the core analysis.
 
+
 ## Installation
+
+### Recommended Installation (via pipx)
+
+The easiest way to install **ArchSafe** globally into an isolated environment without interfering with system packages on Arch Linux is by using `pipx`.
+
+```bash
+# Install pipx if you haven't already
+sudo pacman -S python-pipx
+pipx ensurepath
+
+# Install ArchSafe globally from PyPI
+pipx install archsafe
+```
+
+---
+
+### Alternative: Install from Source (Development Setup)
+
+If you want to clone the repository and install ArchSafe in editable development mode:
 
 ```bash
 git clone https://github.com/Ayush-sinha44/archsafe.git
 cd archsafe
+
+# Create a virtual environment
+python -m venv venv
+
+# Activate the virtual environment
+source venv/bin/activate
+
+# For Fish shell users:
+# source venv/bin/activate.fish
+
+# Install ArchSafe in editable mode
 pip install -e .
 ```
 
-After installation, the `archsafe` command is available system-wide.
+---
+
+### Verify Installation
+
+After installation, verify that ArchSafe is available:
+
+```bash
+archsafe --help
+```
+
+If the installation was successful, the `archsafe` command will be available system-wide.
+
 
 ## Configuration
 
