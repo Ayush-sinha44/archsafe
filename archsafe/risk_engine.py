@@ -130,6 +130,10 @@ def calculate_aur_risk(
     score = 0
     all_findings = list(pkgbuild_analysis.findings)
 
+    # Include install script findings if present
+    if pkgbuild_analysis.install_script_analysis:
+        all_findings.extend(pkgbuild_analysis.install_script_analysis.findings)
+
     # Score from findings
     severity_weights = {
         FindingSeverity.CRITICAL: 30,

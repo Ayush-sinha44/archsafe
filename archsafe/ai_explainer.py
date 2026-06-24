@@ -159,6 +159,17 @@ def explain_aur(result: AURCheckResult, api_key: str | None = None) -> str:
     if not findings_text:
         findings_text = "No suspicious patterns detected.\n"
 
+    # Include install script findings if present
+    install_findings_text = ""
+    install_analysis = result.pkgbuild_analysis.install_script_analysis
+    if install_analysis and install_analysis.findings:
+        install_findings_text = f"\nInstall Script Findings ({install_analysis.script_name}):\n"
+        for f in install_analysis.findings:
+            install_findings_text += f"- [{f.severity.value}] {f.description}"
+            if f.line_number:
+                install_findings_text += f" (line {f.line_number})"
+            install_findings_text += "\n"
+
     pkg = result.package_info
     prompt = (
         f"Package: {pkg.name} {pkg.version}\n"
@@ -166,7 +177,8 @@ def explain_aur(result: AURCheckResult, api_key: str | None = None) -> str:
         f"Votes: {pkg.num_votes}, Popularity: {pkg.popularity}\n"
         f"Maintainer: {pkg.maintainer or 'ORPHANED'}\n"
         f"Out of date: {'Yes' if pkg.out_of_date else 'No'}\n"
-        f"\nFindings:\n{findings_text}"
+        f"\nPKGBUILD Findings:\n{findings_text}"
+        f"{install_findings_text}"
         f"\nExplain these findings to the user in 2-4 sentences. "
         f"Should they proceed with installation?"
     )

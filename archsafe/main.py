@@ -220,6 +220,30 @@ def aur(
 
     console.print(f"  [dim]PKGBUILD analyzed: {len(pkgbuild_analysis.findings)} finding(s).[/dim]")
 
+    # Step 2b: Fetch and analyze .install script (if referenced)
+    if pkgbuild_analysis.has_install_script and pkgbuild_analysis.install_script_name:
+        script_name = pkgbuild_analysis.install_script_name
+        with console.status(f"[bold cyan]Downloading and analyzing {script_name}...[/bold cyan]"):
+            try:
+                install_content = aur_checker.fetch_install_script(
+                    package_name, script_name
+                )
+            except Exception as e:
+                install_content = None
+                console.print(
+                    f"  [yellow]⚠ Could not fetch {script_name}: {e}[/yellow]"
+                )
+
+            if install_content is not None:
+                install_analysis = pkgbuild_analyzer.analyze_install_script(
+                    install_content, script_name
+                )
+                pkgbuild_analysis.install_script_analysis = install_analysis
+                console.print(
+                    f"  [dim]{script_name} analyzed: "
+                    f"{len(install_analysis.findings)} finding(s).[/dim]"
+                )
+
     # Step 3: Calculate risk
     with console.status("[bold cyan]Calculating risk score...[/bold cyan]"):
         result = risk_engine.calculate_aur_risk(package_info, pkgbuild_analysis)

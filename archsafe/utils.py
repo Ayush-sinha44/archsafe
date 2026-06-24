@@ -143,7 +143,7 @@ def display_aur_result(result: AURCheckResult) -> None:
 
     # Findings table
     if result.findings:
-        console.print(f"\n  [bold]Findings:[/bold]")
+        console.print(f"\n  [bold]PKGBUILD Findings:[/bold]")
         findings_table = Table(box=None, padding=(0, 1))
         findings_table.add_column("Severity", width=10)
         findings_table.add_column("Description")
@@ -159,7 +159,38 @@ def display_aur_result(result: AURCheckResult) -> None:
 
         console.print(findings_table)
     else:
-        console.print("\n  [green]No suspicious patterns detected.[/green]")
+        console.print("\n  [green]No suspicious patterns detected in PKGBUILD.[/green]")
+
+    # Install script findings
+    install_analysis = result.pkgbuild_analysis.install_script_analysis
+    if install_analysis:
+        if install_analysis.findings:
+            console.print(
+                f"\n  [bold]Install Script Findings ({install_analysis.script_name}):[/bold]"
+            )
+            install_table = Table(box=None, padding=(0, 1))
+            install_table.add_column("Severity", width=10)
+            install_table.add_column("Description")
+            install_table.add_column("Line", width=6, justify="right")
+
+            for f in sorted(
+                install_analysis.findings,
+                key=lambda x: list(FindingSeverity).index(x.severity),
+                reverse=True,
+            ):
+                sev_color = _SEVERITY_COLORS[f.severity]
+                install_table.add_row(
+                    Text(f.severity.value, style=sev_color),
+                    f.description,
+                    str(f.line_number) if f.line_number else "-",
+                )
+
+            console.print(install_table)
+        else:
+            console.print(
+                f"\n  [green]No suspicious patterns detected in "
+                f"{install_analysis.script_name}.[/green]"
+            )
 
     # Source URLs
     if result.pkgbuild_analysis.source_urls:

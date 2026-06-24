@@ -93,12 +93,21 @@ class AURPackageInfo:
 
 
 @dataclass
+class InstallScriptAnalysis:
+    """Results of .install file static analysis."""
+    script_name: str = ""
+    findings: list[Finding] = field(default_factory=list)
+
+
+@dataclass
 class PKGBUILDAnalysis:
     """Results of PKGBUILD static analysis."""
     source_urls: list[str] = field(default_factory=list)
     has_install_script: bool = False
+    install_script_name: str = ""
     checksums_skipped: bool = False
     findings: list[Finding] = field(default_factory=list)
+    install_script_analysis: InstallScriptAnalysis | None = None
 
 
 @dataclass

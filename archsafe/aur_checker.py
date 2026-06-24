@@ -11,6 +11,7 @@ from archsafe.models import AURPackageInfo
 
 AUR_RPC_URL = "https://aur.archlinux.org/rpc/v5/info"
 AUR_PKGBUILD_URL = "https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD"
+AUR_PLAIN_URL = "https://aur.archlinux.org/cgit/aur.git/plain"
 
 
 def fetch_package_info(name: str) -> AURPackageInfo:
@@ -76,6 +77,29 @@ def fetch_pkgbuild(name: str) -> str:
 
     if response.status_code == 404:
         raise ValueError(f"PKGBUILD not found for package '{name}'.")
+
+    response.raise_for_status()
+    return response.text
+
+
+def fetch_install_script(name: str, script_name: str) -> str | None:
+    """Download a .install script for an AUR package.
+
+    Args:
+        name: The AUR package name.
+        script_name: Filename of the install script (e.g. "foo.install").
+
+    Returns:
+        Raw install-script content as a string, or None if not found.
+
+    Raises:
+        requests.RequestException: On network errors (except 404).
+    """
+    url = f"{AUR_PLAIN_URL}/{script_name}"
+    response = requests.get(url, params={"h": name}, timeout=15)
+
+    if response.status_code == 404:
+        return None
 
     response.raise_for_status()
     return response.text

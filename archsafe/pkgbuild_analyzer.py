@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from archsafe.models import Finding, FindingSeverity, PKGBUILDAnalysis
+from archsafe.models import Finding, FindingSeverity, InstallScriptAnalysis, PKGBUILDAnalysis
 
 
 # Patterns mapped to (category, severity, description)
@@ -196,8 +196,10 @@ def analyze(content: str) -> PKGBUILDAnalysis:
     source_urls = _extract_sources(content)
     findings.extend(_check_source_trust(source_urls))
 
-    # Check for install script
-    has_install = bool(re.search(r"install\s*=\s*[\w.-]+\.install", content))
+    # Check for install script and extract its name
+    install_match = re.search(r"install\s*=\s*([\w.-]+\.install)", content)
+    has_install = install_match is not None
+    install_script_name = install_match.group(1) if install_match else ""
 
     # Check for SKIP checksums
     checksums_skipped = bool(
@@ -216,6 +218,121 @@ def analyze(content: str) -> PKGBUILDAnalysis:
     return PKGBUILDAnalysis(
         source_urls=source_urls,
         has_install_script=has_install,
+        install_script_name=install_script_name,
         checksums_skipped=checksums_skipped,
+        findings=unique_findings,
+    )
+
+
+# Patterns specifically relevant to .install scripts (run as root)
+_INSTALL_CRITICAL_PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
+    (
+        "pipe_execution",
+        re.compile(r"curl\s+.*\|\s*(bash|sh|zsh|python|perl)", re.IGNORECASE),
+        "Downloads and pipes directly to shell interpreter",
+    ),
+    (
+        "pipe_execution",
+        re.compile(r"wget\s+.*\|\s*(bash|sh|zsh|python|perl)", re.IGNORECASE),
+        "Downloads and pipes directly to shell interpreter",
+    ),
+    (
+        "dangerous_rm",
+        re.compile(r"rm\s+-[rf]*\s+/(?:\s|$|\*)"),
+        "Dangerous recursive removal targeting root filesystem",
+    ),
+    (
+        "dangerous_rm",
+        re.compile(r"rm\s+-[rf]*\s+(?:\$HOME|~/|\$\{HOME\})"),
+        "Dangerous recursive removal targeting home directory",
+    ),
+    (
+        "obfuscation",
+        re.compile(r"base64\s+(?:-d|--decode)\s*\|\s*(bash|sh|eval)", re.IGNORECASE),
+        "Decodes base64 content and executes it",
+    ),
+    (
+        "obfuscation",
+        re.compile(r"eval\s+\$\(", re.IGNORECASE),
+        "Uses eval with command substitution",
+    ),
+    (
+        "obfuscation",
+        re.compile(r"python[23]?\s+-c\s+[\"']exec\(", re.IGNORECASE),
+        "Python exec of dynamic code",
+    ),
+]
+
+_INSTALL_HIGH_PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
+    (
+        "suspicious_permissions",
+        re.compile(r"chmod\s+(?:777|666)"),
+        "Sets world-writable/readable permissions",
+    ),
+    (
+        "script_download_exec",
+        re.compile(r"chmod\s+\+x\s+.*(?:curl|wget)", re.IGNORECASE),
+        "Downloads a file and makes it executable",
+    ),
+    (
+        "sensitive_file_access",
+        re.compile(r"(?:cat|tee|cp|mv|>)\s+.*/etc/(?:shadow|passwd|sudoers)"),
+        "Accesses sensitive system files",
+    ),
+    (
+        "user_modification",
+        re.compile(r"(?:useradd|usermod|groupadd)\s+"),
+        "Modifies system users or groups",
+    ),
+]
+
+_INSTALL_MEDIUM_PATTERNS: list[tuple[str, re.Pattern[str], str]] = [
+    (
+        "network_in_install",
+        re.compile(r"(?:^|\s)(?:curl|wget|git\s+clone)\s+", re.MULTILINE),
+        "Network access in install script (runs as root)",
+    ),
+    (
+        "systemd_modification",
+        re.compile(r"systemctl\s+(?:enable|start|mask)\s+"),
+        "Enables or starts systemd services",
+    ),
+]
+
+
+def analyze_install_script(content: str, script_name: str) -> InstallScriptAnalysis:
+    """Perform static analysis on a .install script.
+
+    Args:
+        content: Raw .install file content.
+        script_name: Filename of the install script.
+
+    Returns:
+        InstallScriptAnalysis with all findings.
+    """
+    findings: list[Finding] = []
+
+    # Scan for patterns at each severity level
+    findings.extend(
+        _scan_patterns(content, _INSTALL_CRITICAL_PATTERNS, FindingSeverity.CRITICAL)
+    )
+    findings.extend(
+        _scan_patterns(content, _INSTALL_HIGH_PATTERNS, FindingSeverity.HIGH)
+    )
+    findings.extend(
+        _scan_patterns(content, _INSTALL_MEDIUM_PATTERNS, FindingSeverity.MEDIUM)
+    )
+
+    # Deduplicate findings (same category + same line)
+    seen: set[tuple[str, int | None]] = set()
+    unique_findings: list[Finding] = []
+    for f in findings:
+        key = (f.category, f.line_number)
+        if key not in seen:
+            seen.add(key)
+            unique_findings.append(f)
+
+    return InstallScriptAnalysis(
+        script_name=script_name,
         findings=unique_findings,
     )
